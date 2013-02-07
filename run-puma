@@ -1,8 +1,9 @@
 #!/bin/bash
-app=$1; config=$2; log=$3;
+app=$1; log=$2; args=$3
 cd $app || exit 1
+
 if [ -e Gemfile ]; then
-  exec bundle exec puma -C $config 2>&1 >> $log
+  exec sh -c "exec bundle exec puma $args" 2>&1 >> $log
 else
-  exec puma -C $config 2>&1 >> $log
+  exec sh -c "exec puma $args" 2>&1 >> $log
 fi

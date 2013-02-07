@@ -37,17 +37,26 @@ do_start() {
   beast=$1
   dir=`grep "^dir:" $beast | cut -d: -f 2`
   user=`grep "^user:" $beast | cut -d: -f 2`
-  config_file=`grep "^config:" $beast | cut -d: -f 2`
-  if [ "$config_file" = "" ]; then
-    config_file="$dir/config/puma.rb"
-  fi
   log_file=`grep "^log:" $beast | cut -d: -f 2`
   if [ "$log_file" = "" ]; then
     log_file="$dir/log/puma.log"
   fi
+
+  config_file=`grep "^config:" $beast | cut -d: -f 2`
+  if [ "$config_file" = "" ]; then
+    config_file="$dir/config/puma.rb"
+  fi
+  if [ -e $config_file ]; then
+    args="-C $config_file"
+  fi
+
+  args="$args -S tmp/puma/state --pidfile tmp/puma/pid  `grep "^args:" $beast | cut -d: -f 2`"
   echo "--> Woke up puma $beast"
   echo "    user $user, log to $log_file"
-  start-stop-daemon --verbose --start --chdir $dir --user $user --background --exec $RUNPUMA -- $dir $config_file $log_file
+  start-stop-daemon --verbose --start \
+                    --chdir $dir --user $user \
+                    --background \
+                    --exec $RUNPUMA -- $dir $log_file "${args}"
 }
 
 cmd_stop() {
