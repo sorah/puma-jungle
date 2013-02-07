@@ -1,0 +1,199 @@
+#!/bin/bash
+
+NAME=puma
+SCRIPTNAME=/etc/init.d/$NAME
+RUNPUMA=/usr/local/bin/run-puma
+
+CONFIG_DIR=/etc/puma
+[ -d "$CONFIG_DIR" ] || mkdir "$CONFIG_DIR"
+
+JUNGLE="$(ls -1 $CONFIG_DIR/*)"
+
+
+cmd_start() {
+  echo "=> Running the jungle..."
+  for beast in $JUNGLE; do
+    cmd_start_one $beast
+  done
+}
+
+cmd_start_one() {
+  beast=$1
+  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  PIDFILE=$dir/tmp/puma/pid
+  if [ -e $PIDFILE ]; then
+    PID=`cat $PIDFILE`
+    if [ "`ps -A -o pid= | grep -c $PID`" -eq 0 ]; then
+      do_start $beast
+    else
+      do_restart $beast
+    fi
+  else
+    do_start $beast
+  fi
+}
+
+do_start() {
+  beast=$1
+  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  user=`grep "^user:" $beast | cut -d: -f 2`
+  config_file=`grep "^config:" $beast | cut -d: -f 2`
+  if [ "$config_file" = "" ]; then
+    config_file="$dir/config/puma.rb"
+  fi
+  log_file=`grep "^log:" $beast | cut -d: -f 2`
+  if [ "$log_file" = "" ]; then
+    log_file="$dir/log/puma.log"
+  fi
+  echo "--> Woke up puma $beast"
+  echo "    user $user, log to $log_file"
+  start-stop-daemon --verbose --start --chdir $dir --user $user --background --exec $RUNPUMA -- $dir $config_file $log_file
+}
+
+cmd_stop() {
+  echo "=> Putting all the beasts to bed..."
+  for beast in $JUNGLE; do
+    do_stop $beast
+  done
+}
+
+do_stop() {
+  beast=$1
+  echo "--> Stopping $beast"
+  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  PIDFILE=$dir/tmp/puma/pid
+  STATEFILE=$dir/tmp/puma/state
+  if [ -e $PIDFILE ]; then
+    PID=`cat $PIDFILE`
+    if [ "`ps -A -o pid= | grep -c $PID`" -eq 0 ]; then
+      echo "---> Puma $1 isn't running."
+    else
+      echo "---> About to kill PID `cat $PIDFILE`"
+      pumactl --state $STATEFILE stop
+      # Many daemons don't delete their pidfiles when they exit.
+      rm -f $PIDFILE $STATEFILE
+    fi
+  else
+    echo "---> No puma here..."
+  fi
+  return 0
+}
+
+cmd_restart() {
+  for beast in $JUNGLE; do
+    do_restart $beast
+  done
+}
+
+do_restart() {
+  beast=$1
+  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  PIDFILE=$dir/tmp/puma/pid
+
+  if [ -e $PIDFILE ]; then
+    echo "--> About to restart puma $beast"
+    pumactl --state $dir/tmp/puma/state restart
+  else
+    echo "--> Your puma was never playing... Let's get it out there first" 
+    cmd_start_one $beast
+  fi
+	return 0
+}
+
+cmd_status() {
+  for beast in $JUNGLE; do
+    do_status beast
+  done
+}
+
+do_status() {
+  dir=`grep "^dir:" $1 | cut -d: -f 2`
+  PIDFILE=$dir/tmp/puma/pid
+
+  if [ -e $PIDFILE ]; then
+    echo "--> About to status puma $1"
+    pumactl --state $dir/tmp/puma/state stats
+    # kill -s USR2 `cat $PIDFILE`
+    # TODO Check if process exist
+  else
+    echo "--> $1 isn't there :(..." 
+  fi
+	return 0
+}
+
+cmd_add() {
+  cat > $CONFIG_DIR/$1 <<-EOF
+dir:$2
+user:$3
+EOF
+  [ "$4" != "" ] && echo "config:$4" >> $CONFIG_DIR/$1
+  [ "$5" != "" ] && echo "log:$5" >> $CONFIG_DIR/$1
+  echo "Added a Puma to the jungle: $1."
+}
+
+cmd_remove() {
+  if [ -e "$CONFIG/$1" ]; then
+    do_stop $1
+    rm "$CONFIG/$1"
+  else
+    echo "There's no app $1 to remove."
+  fi
+}
+
+case "$1" in
+  start)
+    [ "$VERBOSE" != no ] && echo "Starting $DESC" "$NAME"
+    if [ "$#" -eq 1 ]; then
+      cmd_start
+    else
+      cmd_start_one $CONFIG_DIR/$2
+    fi
+  ;;
+  stop)
+    [ "$VERBOSE" != no ] && echo "Stopping $DESC" "$NAME"
+    if [ "$#" -eq 1 ]; then
+     cmd_stop
+    else
+      do_stop $CONFIG_DIR/$2
+    fi
+  ;;
+  status)
+    if [ "$#" -eq 1 ]; then
+      cmd_status
+    else
+      do_status $CONFIG_DIR/$2
+    fi
+  ;;
+  restart)
+    if [ "$#" -eq 1 ]; then
+      cmd_restart
+    else
+      do_restart $CONFIG_DIR/$2
+    fi
+  ;;
+  add)
+    if [ "$#" -lt 3 ]; then
+      echo "Usage: $SCRIPTNAME add name /path/to/app user /path/to/app/config/puma.rb /path/to/app/config/log/puma.log"
+      exit 1
+    else
+      cmd_add $2 $3 $4 $5 $6
+    fi
+  ;;
+  remove)
+    if [ "$#" -lt 2 ]; then
+      echo "Specify the app name to remove."
+      exit 1
+    else
+      cmd_remove $2
+    fi
+  ;;
+  *)
+    echo "Usage:" >&2
+    echo "  Run the jungle: $SCRIPTNAME {start|stop|status|restart} [app_name]" >&2
+    echo "  Add a Puma:     $SCRIPTNAME add app_name /path/to/app user[:group] [/path/to/config/puma.rb [/path/to/puma.log]]"
+    echo "  Remove a Puma:  $SCRIPTNAME remove app_name"
+    exit 3
+  ;;
+esac
+:
+
