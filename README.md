@@ -1,4 +1,4 @@
-# Puma Jungle, modified by sorah
+# Yet Another Puma Jungle
 
 inspired by https://github.com/puma/puma/blob/master/tools/jungle, rewritten by scratch.
 but differ at:
@@ -7,9 +7,9 @@ but differ at:
 
   * for easier managing by puppet, chef, etc.
 
-* Not requires lsb-functions, just only start-stop-daemon
+* Not require `lsb-functions`, you just need only `start-stop-daemon`
 
-  * Work with no modification on Gentoo
+  * Works with no modification on Gentoo!
 
 ## install
 
