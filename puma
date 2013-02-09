@@ -19,7 +19,7 @@ cmd_start() {
 
 cmd_start_one() {
   beast=$1
-  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  dir=`grep "^dir:" $beast | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
   if [ -e $PIDFILE ]; then
     PID=`cat $PIDFILE`
@@ -35,14 +35,14 @@ cmd_start_one() {
 
 do_start() {
   beast=$1
-  dir=`grep "^dir:" $beast | cut -d: -f 2`
-  user=`grep "^user:" $beast | cut -d: -f 2`
-  log_file=`grep "^log:" $beast | cut -d: -f 2`
+  dir=`grep "^dir:" $beast | cut -d: -f 2-`
+  user=`grep "^user:" $beast | cut -d: -f 2-`
+  log_file=`grep "^log:" $beast | cut -d: -f 2-`
   if [ "$log_file" = "" ]; then
     log_file="$dir/log/puma.log"
   fi
 
-  config_file=`grep "^config:" $beast | cut -d: -f 2`
+  config_file=`grep "^config:" $beast | cut -d: -f 2-`
   if [ "$config_file" = "" ]; then
     config_file="$dir/config/puma.rb"
   fi
@@ -50,7 +50,7 @@ do_start() {
     args="-C $config_file"
   fi
 
-  args="$args -S tmp/puma/state --pidfile tmp/puma/pid  `grep "^args:" $beast | cut -d: -f 2`"
+  args="$args -S tmp/puma/state --pidfile tmp/puma/pid  `grep "^args:" $beast | cut -d: -f 2-`"
   echo "--> Woke up puma $beast"
   echo "    user $user, log to $log_file"
   start-stop-daemon --verbose --start \
@@ -69,7 +69,7 @@ cmd_stop() {
 do_stop() {
   beast=$1
   echo "--> Stopping $beast"
-  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  dir=`grep "^dir:" $beast | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
   STATEFILE=$dir/tmp/puma/state
   if [ -e $PIDFILE ]; then
@@ -96,7 +96,7 @@ cmd_restart() {
 
 do_restart() {
   beast=$1
-  dir=`grep "^dir:" $beast | cut -d: -f 2`
+  dir=`grep "^dir:" $beast | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
 
   if [ -e $PIDFILE ]; then
@@ -116,7 +116,7 @@ cmd_status() {
 }
 
 do_status() {
-  dir=`grep "^dir:" $1 | cut -d: -f 2`
+  dir=`grep "^dir:" $1 | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
 
   if [ -e $PIDFILE ]; then
