@@ -58,7 +58,7 @@ do_start() {
     args="-C $config_file"
   fi
 
-  args="$args -S tmp/puma/state --pidfile tmp/puma/pid  `grep "^args:" $beast | cut -d: -f 2-`"
+  args="$args --control auto -S tmp/puma/state --pidfile tmp/puma/pid  `grep "^args:" $beast | cut -d: -f 2-`"
   echo "--> Woke up puma $beast"
   echo "    user $user, log to $log_file"
   start-stop-daemon --verbose --start \
