@@ -9,6 +9,10 @@ CONFIG_DIR=/etc/puma
 
 JUNGLE="$(ls -1 $CONFIG_DIR/*)"
 
+abort() {
+  echo $* > /dev/stderr
+  exit 1
+}
 
 cmd_start() {
   echo "=> Running the jungle..."
@@ -19,6 +23,8 @@ cmd_start() {
 
 cmd_start_one() {
   beast=$1
+  [ -e $beast ] || abort "$(basename $beast) not found"
+
   dir=`grep "^dir:" $beast | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
   if [ -e $PIDFILE ]; then
@@ -35,6 +41,8 @@ cmd_start_one() {
 
 do_start() {
   beast=$1
+  [ -e $beast ] || abort "$(basename $beast) not found"
+
   dir=`grep "^dir:" $beast | cut -d: -f 2-`
   user=`grep "^user:" $beast | cut -d: -f 2-`
   log_file=`grep "^log:" $beast | cut -d: -f 2-`
@@ -68,6 +76,8 @@ cmd_stop() {
 
 do_stop() {
   beast=$1
+  [ -e $beast ] || abort "$(basename $beast) not found"
+
   echo "--> Stopping $beast"
   dir=`grep "^dir:" $beast | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
@@ -96,6 +106,8 @@ cmd_restart() {
 
 do_restart() {
   beast=$1
+  [ -e $beast ] || abort "$(basename $beast) not found"
+
   dir=`grep "^dir:" $beast | cut -d: -f 2-`
   PIDFILE=$dir/tmp/puma/pid
 
